@@ -223,7 +223,7 @@ if (!requestMediaKeySystemAccess && HTMLVideoElement_.prototype.webkitGenerateKe
     }),
     close: wrap(function() {
       if (this._con)
-        this._con.dispose();
+        this._con.unsubscribe();
       this._con = null;
       this._vid = null;
     }),
@@ -314,7 +314,7 @@ else if (MediaKeys_ && !requestMediaKeySystemAccess) {
       if (this._ss) {
         this._ss.close();
         this._ss = null;
-        this._con.dispose();
+        this._con.unsubscribe();
         this._con = null;
       }
     }),
