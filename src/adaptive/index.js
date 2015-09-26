@@ -16,7 +16,7 @@
 
 var _ = require("canal-js-utils/misc");
 var log = require("canal-js-utils/log");
-var { Observable, BehaviorSubject, CompositeDisposable } = require("canal-js-utils/rx");
+var { Observable, BehaviorSubject, Subscription } = require("canal-js-utils/rx");
 var { combineLatest } = Observable;
 var { only } = require("canal-js-utils/rx-ext");
 
@@ -80,7 +80,8 @@ module.exports = function(metrics, timings, deviceEvents, options={}) {
     video: AverageBitrate(filterByType(metrics, "video"), { alpha: 0.6 }).publishValue(initVideoBitrate || 0),
   };
 
-  var conns = new CompositeDisposable(_.map(_.values($averageBitrates), a => a.connect()));
+  var conns = new Subscription();
+  _.each(_.values($averageBitrates), a => conns.add(a.connect()));
 
   var $usrBitrates = {
     audio: new BehaviorSubject(Infinity),
@@ -193,8 +194,8 @@ module.exports = function(metrics, timings, deviceEvents, options={}) {
   }
 
   return {
-    setLanguage(lng) { $languages.onNext(lng); },
-    setSubtitle(sub) { $subtitles.onNext(sub); },
+    setLanguage(lng) { $languages.next(lng); },
+    setSubtitle(sub) { $subtitles.next(sub); },
     getLanguage() { return $languages.value; },
     getSubtitle() { return $subtitles.value; },
 
@@ -205,12 +206,12 @@ module.exports = function(metrics, timings, deviceEvents, options={}) {
     getAudioBufferSize() { return $bufSizes.audio.value; },
     getVideoBufferSize() { return $bufSizes.video.value; },
 
-    setAudioBitrate(x)    { $usrBitrates.audio.onNext(def(x, Infinity)); },
-    setVideoBitrate(x)    { $usrBitrates.video.onNext(def(x, Infinity)); },
-    setAudioMaxBitrate(x) { $maxBitrates.audio.onNext(def(x, Infinity)); },
-    setVideoMaxBitrate(x) { $maxBitrates.video.onNext(def(x, Infinity)); },
-    setAudioBufferSize(x) { $bufSizes.audio.onNext(def(x, defBufSize)); },
-    setVideoBufferSize(x) { $bufSizes.video.onNext(def(x, defBufSize)); },
+    setAudioBitrate(x)    { $usrBitrates.audio.next(def(x, Infinity)); },
+    setVideoBitrate(x)    { $usrBitrates.video.next(def(x, Infinity)); },
+    setAudioMaxBitrate(x) { $maxBitrates.audio.next(def(x, Infinity)); },
+    setVideoMaxBitrate(x) { $maxBitrates.video.next(def(x, Infinity)); },
+    setAudioBufferSize(x) { $bufSizes.audio.next(def(x, defBufSize)); },
+    setVideoBufferSize(x) { $bufSizes.video.next(def(x, defBufSize)); },
 
     getBufferAdapters,
     getAdaptationsChoice,

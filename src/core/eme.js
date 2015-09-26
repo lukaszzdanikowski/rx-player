@@ -19,7 +19,7 @@ const log = require("canal-js-utils/log");
 const Promise_ = require("canal-js-utils/promise");
 const assert = require("canal-js-utils/assert");
 const { Observable } = require("canal-js-utils/rx");
-const { combineLatest, empty, fromPromise, merge, just } = Observable;
+const { combineLatest, empty, merge, just } = Observable;
 const {
   requestMediaKeySystemAccess,
   setMediaKeys,
@@ -314,8 +314,8 @@ function findCompatibleKeySystem(keySystems) {
         .then(
           keySystemAccess => {
             log.info("eme: found compatible keysystem", keyType, keySystemConfigurations);
-            obs.onNext({ keySystem, keySystemAccess });
-            obs.onCompleted();
+            obs.next({ keySystem, keySystemAccess });
+            obs.complete();
           },
           () => {
             log.debug("eme: rejected access to keysystem", keyType, keySystemConfigurations);
@@ -331,7 +331,7 @@ function findCompatibleKeySystem(keySystems) {
 }
 
 function createAndSetMediaKeys(video, keySystem, keySystemAccess) {
-  return fromPromise(
+  return Observable.from(
     keySystemAccess.createMediaKeys().then(mk => {
       $mediaKeys = mk;
       $keySystem = keySystem;
@@ -343,7 +343,7 @@ function createAndSetMediaKeys(video, keySystem, keySystemAccess) {
 
 function makeNewKeyRequest(session, initDataType, initData) {
   log.debug("eme: generate request", initDataType, initData);
-  return fromPromise(
+  return Observable.from(
     session.generateRequest(initDataType, initData)
       .then(() => session)
   );
@@ -351,7 +351,7 @@ function makeNewKeyRequest(session, initDataType, initData) {
 
 function loadPersistedSession(session, sessionId) {
   log.debug("eme: load persisted session", sessionId);
-  return fromPromise(
+  return Observable.from(
     session.load(sessionId)
       .then(() => session)
   );
@@ -368,7 +368,7 @@ function logAndThrow(errMessage, reason) {
 
 function toObservable(value) {
   if (_.isPromise(value))
-    return fromPromise(value);
+    return Observable.from(value);
 
   if (!_.isObservable(value))
     return just(value);
@@ -472,7 +472,7 @@ function EME(video, keySystems) {
             );
 
             $storedSessions.delete(initData, null);
-            return fromPromise($loadedSessions.delete(sessionId))
+            return Observable.from($loadedSessions.delete(sessionId))
               .flatMap(() => {
                 session = mediaKeys.createSession(sessionType);
                 return makeNewKeyRequest(session, initDataType, initData);
@@ -497,7 +497,7 @@ function EME(video, keySystems) {
           err
         );
 
-        return fromPromise(firstLoadedSession.close())
+        return Observable.from(firstLoadedSession.close())
           .flatMap(() => {
             session = mediaKeys.createSession(sessionType);
             return makeNewKeyRequest(session, initDataType, initData);
@@ -583,16 +583,15 @@ function EME(video, keySystems) {
   return Observable.create(obs => {
     let sub = combineLatest(
       onEncrypted(video),
-      findCompatibleKeySystem(keySystems),
-      handleEncryptedEvents
+      findCompatibleKeySystem(keySystems)
     )
       .take(1)
-      .mergeAll()
+      .flatMap(([evt, ks]) => handleEncryptedEvents(evt, ks))
       .subscribe(obs);
 
     return () => {
       if (sub) {
-        sub.dispose();
+        sub.unsubscribe();
       }
 
       setMediaKeys(video, null)
