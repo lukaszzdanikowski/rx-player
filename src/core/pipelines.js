@@ -38,10 +38,10 @@ var noCache = {
  *
  * TODO(pierre): create a pipeline patcher to work over a WebWorker
  */
-function createPipeline(type, { resolver, loader, parser }, metrics, opts={}) {
-  if (!parser) parser = just;
-  if (!loader) loader = just;
-  if (!resolver) resolver = just;
+function createPipeline(type, transportPipeline, metrics, opts={}) {
+  if (!transportPipeline.parser) transportPipeline.parser = just;
+  if (!transportPipeline.loader) transportPipeline.loader = just;
+  if (!transportPipeline.resolver) transportPipeline.resolver = just;
 
   var { totalRetry, timeout, cache } = _.defaults(opts, {
     totalRetry: 3,
@@ -60,7 +60,7 @@ function createPipeline(type, { resolver, loader, parser }, metrics, opts={}) {
   };
 
   function callLoader(resolvedInfos) {
-    return loader(resolvedInfos)
+    return transportPipeline.loader(resolvedInfos)
       .timeout(timeout, timeoutError)
       .map((response) => {
         var loadedInfos = _.extend({ response }, resolvedInfos);
@@ -69,14 +69,14 @@ function createPipeline(type, { resolver, loader, parser }, metrics, opts={}) {
         cache.add(resolvedInfos, loadedInfos);
 
         // emit loadedInfos in the metrics observer
-        metrics.next({ type, value: loadedInfos });
+        metrics.next({ type, value: { ...loadedInfos } });
 
         return loadedInfos;
       });
   }
 
   return (infos) => {
-    return resolver(infos)
+    return transportPipeline.resolver(infos)
       .flatMap((resolvedInfos) => {
         var backedOffLoader = retryWithBackoff(() => callLoader(resolvedInfos), backoffOptions);
 
@@ -90,7 +90,7 @@ function createPipeline(type, { resolver, loader, parser }, metrics, opts={}) {
           return just(fromCache);
       })
       .flatMap((loadedInfos) => {
-        return parser(loadedInfos)
+        return transportPipeline.parser(loadedInfos)
           .map(parsed => _.extend({ parsed }, loadedInfos));
       });
   };
@@ -104,7 +104,7 @@ function PipeLines() {
   var createPipelines = (transport, options) => {
     options = options || {};
 
-    var ps = [];
+    var ps = {};
     for (var pipelineType in transport) {
       ps[pipelineType] = createPipeline(
         pipelineType, transport[pipelineType], metrics, options[pipelineType]);

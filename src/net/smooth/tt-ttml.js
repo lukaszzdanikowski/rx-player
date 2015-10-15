@@ -20,8 +20,6 @@ var rBr = /<br[^>]+>/gm;
 var rAbsTime = /^(([0-9]+):)?([0-9]+):([0-9]+)(\.([0-9]+))?$/;
 var rRelTime = /(([0-9]+)(\.[0-9]+)?)(ms|h|m|s)/;
 
-var escape = window.escape;
-
 var MULTS = {
   h: 3600,
   m: 60,
@@ -108,7 +106,7 @@ function parseNode(node, parentOffset, siblingOffset) {
   return {
     // Trim left and right whitespace from text and convert non-explicit line breaks
     id: node.getAttribute("xml:id") || node.getAttribute("id"),
-    text: decodeURIComponent(escape(node.innerHTML.replace(rBr, "\n"))),
+    text: decodeURIComponent(encodeURIComponent(node.innerHTML.replace(rBr, "\n"))),
     start, end,
   };
 }

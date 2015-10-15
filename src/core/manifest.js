@@ -149,6 +149,8 @@ function normalizeRepresentation(representation, inherit) {
     representation.bitrate = 1;
   }
 
+  representation.timescale = index.timescale;
+
   // Fix issue in some packagers, like GPAC, generating a non
   // compliant mimetype with RFC 6381. Other closed-source packagers
   // maybe impacted.

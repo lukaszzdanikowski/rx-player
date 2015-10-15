@@ -115,7 +115,7 @@ module.exports = function(options={}) {
         .map(url => ({ url: replaceToken(resolveManifest(url), token) }));
     },
     loader({ url }) {
-      return req({ url, format: "document" });
+      return req({ url, format: "text" });
     },
     parser({ response }) {
       return just({
@@ -158,7 +158,7 @@ module.exports = function(options={}) {
         var protection = adaptation.smoothProtection || {};
         switch(adaptation.type) {
         case "video": blob = createVideoInitSegment(
-          representation.index.timescale,
+          representation.timescale,
           representation.width,
           representation.height,
           72, 72, 4, // vRes, hRes, nal
@@ -167,7 +167,7 @@ module.exports = function(options={}) {
           protection.keySystems // pssList
         ); break;
         case "audio": blob = createAudioInitSegment(
-          representation.index.timescale,
+          representation.timescale,
           representation.channels,
           representation.bitsPerSample,
           representation.packetSize,
@@ -248,7 +248,7 @@ module.exports = function(options={}) {
       var { nextSegments, currentSegment } = extractTimingsInfos(blob, adaptation, segment);
 
       return just({
-        blob: parser_(text, lang, segment.time / representation.index.timescale),
+        blob: parser_(text, lang, segment.time / representation.timescale),
         currentSegment,
         nextSegments,
       });

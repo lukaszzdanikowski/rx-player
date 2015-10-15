@@ -40,8 +40,8 @@ var { parseTimeFragment } = require("./time-fragment");
 var DeviceEvents = require("./device-events");
 var manifestHelpers = require("./manifest");
 // TODO(pierre): separate transports from main build
-var Transports = require("../net");
-var PipeLines = require("./pipelines");
+// var Transports = require("../net");
+var Pipelines = require("./pipelines");
 var Adaptive = require("../adaptive");
 var Stream = require("./stream");
 var EME = require("./eme");
@@ -78,7 +78,8 @@ class Player extends EventEmitter {
       transport,
       transportOptions,
       initVideoBitrate,
-      initAudioBitrate
+      initAudioBitrate,
+      Pipelines: $Pipelines
     } = options;
 
     super();
@@ -108,7 +109,7 @@ class Player extends EventEmitter {
     // multicaster forwarding all streams events
     this.stream = new Subject();
 
-    var { createPipelines, metrics } = PipeLines();
+    var { createPipelines, metrics } = ($Pipelines || Pipelines)();
 
     var timings = timingsSampler(videoElement);
     var deviceEvents = DeviceEvents(videoElement);
@@ -213,18 +214,19 @@ class Player extends EventEmitter {
       keySystems = _.compact(_.pluck(manifests, "keySystem"));
     }
 
-    if (_.isString(transport))
-      transport = Transports[transport];
-
-    if (_.isFunction(transport))
-      transport = transport(_.defaults(transportOptions, this.defaultTransportOptions));
-
-    assert(transport, "player: transport " + opts.transport + " is not supported");
-
     if (directFile)
       directFile = createDirectFileManifest();
 
-    return { url, keySystems, subtitles, timeFragment, autoPlay, transport, directFile };
+    return {
+      url,
+      keySystems,
+      subtitles,
+      timeFragment,
+      autoPlay,
+      transport,
+      transportOptions,
+      directFile,
+    };
   }
 
   loadVideo(options = {}) {
@@ -238,6 +240,7 @@ class Player extends EventEmitter {
       timeFragment,
       autoPlay,
       transport,
+      transportOptions,
       directFile
     } = options;
 
@@ -246,8 +249,9 @@ class Player extends EventEmitter {
     this.playing.next(autoPlay);
 
     var pipelines = this.createPipelines(transport, {
-      audio: { cache: new InitializationSegmentCache() },
-      video: { cache: new InitializationSegmentCache() },
+      transportOptions,
+      // audio: { cache: new InitializationSegmentCache() },
+      // video: { cache: new InitializationSegmentCache() },
     });
 
     var { adaptive, timings, video } = this;
