@@ -35,14 +35,14 @@ var representationBaseType = [
   "index",
 ];
 
-var SUPPORTED_ADAPTATIONS_TYPE = ["audio", "video", "text"];
+var SUPPORTED_ADAPTATIONS_TYPE = ["audio", "video", "text", "image"];
 var DEFAULT_PRESENTATION_DELAY = 15;
 
 function parseType(mimeType) {
   return mimeType.split("/")[0];
 }
 
-function normalizeManifest(location, manifest, subtitles) {
+function normalizeManifest(location, manifest, subtitles, images) {
   assert(manifest.transportType);
 
   manifest.id = manifest.id || _.uniqueId();
@@ -66,7 +66,11 @@ function normalizeManifest(location, manifest, subtitles) {
     subtitles = normalizeSubtitles(subtitles);
   }
 
-  var periods = _.map(manifest.periods, period => normalizePeriod(period, urlBase, subtitles));
+  if (images) {
+    images = normalizeImages(images);
+  }
+
+  var periods = _.map(manifest.periods, period => normalizePeriod(period, urlBase, subtitles, images));
 
   // TODO(pierre): support multiple periods
   _.extend(manifest, periods[0]);
@@ -83,11 +87,12 @@ function normalizeManifest(location, manifest, subtitles) {
   return manifest;
 }
 
-function normalizePeriod(period, inherit, subtitles) {
+function normalizePeriod(period, inherit, subtitles, images) {
   period.id = period.id || _.uniqueId();
 
   var adaptations = period.adaptations;
   adaptations = adaptations.concat(subtitles || []);
+  adaptations = adaptations.concat(images || []);
   adaptations = _.map(adaptations, ada => normalizeAdaptation(ada, inherit));
   adaptations = _.filter(adaptations, (adaptation) => {
     if (SUPPORTED_ADAPTATIONS_TYPE.indexOf(adaptation.type) < 0) {
@@ -186,6 +191,31 @@ function normalizeSubtitles(subtitles) {
         }
       }]
     }));
+  });
+}
+
+function normalizeImages(images) {
+  if (!_.isArray(images))
+    images = [images];
+
+  return _.map(images, ({ mimeType, url, /* size */ }) => {
+    return {
+      id: _.uniqueId(),
+      type: "image",
+      mimeType,
+      rootURL: url,
+      baseURL: "",
+      representations: [{
+        id: _.uniqueId(),
+        mimeType,
+        index: {
+          indexType: "template",
+          duration: Number.MAX_VALUE,
+          timescale: 1,
+          startNumber: 0,
+        }
+      }]
+    };
   });
 }
 

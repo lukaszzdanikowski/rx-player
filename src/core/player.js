@@ -117,6 +117,9 @@ class Player extends EventEmitter {
     // multicaster forwarding all streams events
     this.stream = new Subject();
 
+    // multcaster specific for images events
+    this.images = new Subject();
+
     var { createPipelines, metrics } = PipeLines();
 
     var timings = timingsSampler(videoElement);
@@ -145,8 +148,8 @@ class Player extends EventEmitter {
 
   resetStates() {
     this.man = null;
-    this.reps = { video: null, audio: null, text: null };
-    this.adas = { video: null, audio: null, text: null };
+    this.reps = { video: null, audio: null, text: null, images: null };
+    this.adas = { video: null, audio: null, text: null, images: null };
     this.evts = {};
     this.frag = { start: null, end: null };
   }
@@ -156,6 +159,7 @@ class Player extends EventEmitter {
       this.subscriptions.unsubscribe();
       this.subscriptions = null;
     }
+    this.images.next(null);
   }
 
   stop() {
@@ -200,6 +204,7 @@ class Player extends EventEmitter {
       keySystems,
       timeFragment,
       subtitles,
+      images,
       autoPlay,
       directFile
     } = _.defaults(_.cloneObject(opts), {
@@ -208,6 +213,7 @@ class Player extends EventEmitter {
       keySystems: [],
       timeFragment: {},
       subtitles: [],
+      images: [],
       autoPlay: false,
       directFile: false,
     });
@@ -235,7 +241,7 @@ class Player extends EventEmitter {
     if (directFile)
       directFile = createDirectFileManifest();
 
-    return { url, keySystems, subtitles, timeFragment, autoPlay, transport, directFile };
+    return { url, keySystems, subtitles, images, timeFragment, autoPlay, transport, directFile };
   }
 
   loadVideo(options = {}) {
@@ -246,6 +252,7 @@ class Player extends EventEmitter {
       url,
       keySystems,
       subtitles,
+      images,
       timeFragment,
       autoPlay,
       transport,
@@ -268,6 +275,7 @@ class Player extends EventEmitter {
         url,
         keySystems,
         subtitles,
+        images,
         timings,
         timeFragment,
         adaptive,
@@ -358,7 +366,9 @@ class Player extends EventEmitter {
       timings.each(t => this._triggerTimeChange(t)),
 
       stream.subscribe(
-        () => {},
+        (s) => {
+          this._updateImages(s);
+        },
         (e) => {
           this.resetStates();
           this.trigger("error", e);
@@ -412,6 +422,14 @@ class Player extends EventEmitter {
     }
   }
 
+  _updateImages(s) {
+    if (s.type === "segment"
+  && s.value && s.value.representation
+  && s.value.representation.mimeType === "application/bif") {
+      this.images.next(s.value.parsed.blob);
+    }
+  }
+
   getManifest() {
     return this.man;
   }
@@ -422,6 +440,10 @@ class Player extends EventEmitter {
 
   getNativeTextTrack() {
     return this.video.textTracks[0];
+  }
+
+  getImageTrack() {
+    return this.images;
   }
 
   getPlayerState() {

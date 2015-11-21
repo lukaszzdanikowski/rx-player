@@ -31,9 +31,10 @@ var {
   getMdat,
   getTraf,
   parseTfrf,
-  parseTfxd
+  parseTfxd,
 } = require("./mp4");
 
+var { parseBif } = require("./bif");
 var { parseSami } = require("./tt-sami");
 var { parseTTML } = require("./tt-ttml");
 var TT_PARSERS = {
@@ -255,10 +256,50 @@ module.exports = function(options={}) {
     },
   };
 
+  var imageTrackPipeline = {
+    loader({ adaptation, representation, segment }) {
+      if (segment.init) {
+        return empty();
+      } else {
+        var url = resolveURL(adaptation.rootURL,
+          adaptation.baseURL, representation.index.media);
+        return req({ url, format: "arraybuffer" });
+      }
+    },
+    parser({ response, adaptation, representation, segment }) {
+      var { blob } = response;
+      blob = new Uint8Array(blob);
+
+      var currentSegment = {
+        ts: 0,
+        d:  Infinity
+      };
+
+      if (blob) {
+        let bif = parseBif(blob);
+        blob = bif.thumbs;
+
+        // var firstThumb = blob[0];
+        // var lastThumb  = blob[blob.length - 1];
+
+        // currentSegment = {
+        //   ts: firstThumb.ts,
+        //   d:  lastThumb.ts
+        // };
+      }
+
+      return just({
+        blob,
+        currentSegment
+      });
+    }
+  };
+
   return {
     manifest: manifestPipeline,
     audio: segmentPipeline,
     video: segmentPipeline,
     text: textTrackPipeline,
+    image: imageTrackPipeline,
   };
 };

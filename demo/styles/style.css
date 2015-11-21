@@ -119,6 +119,15 @@ body {
   transition: .5s all;
 }
 
+.tipsy {
+  max-width: 45%;
+  position: relative;
+
+  img {
+    width: 100%;
+  }
+}
+
 #progress-bar-played {
   background: #fafafa;;
   z-index: 3;

@@ -26,6 +26,7 @@ var min = Math.min;
 
 var { MediaSource_, sourceOpen, loadedMetadataEvent } = require("./compat");
 var TextSourceBuffer = require("./text-buffer");
+var ImageSourceBuffer = require("./image-buffer");
 var { getLiveEdge } = require("./index-handler");
 var Buffer = require("./buffer");
 var EME = require("./eme");
@@ -64,6 +65,7 @@ function Stream({
   url,
   keySystems,
   subtitles,
+  images,
   timings,
   timeFragment,
   adaptive,
@@ -117,9 +119,10 @@ function Stream({
         log.info("add text sourcebuffer", codec);
         sourceBuffer = new TextSourceBuffer(video, codec);
       }
-      // else if (type == "image") {
-      //    ...
-      // }
+      else if (type == "image") {
+        log.info("add text sourcebuffer", codec);
+        sourceBuffer = new ImageSourceBuffer(video, codec);
+      }
       else {
         var errMessage = "stream: unknown buffer type " + type;
         log.error(errMessage);
@@ -265,7 +268,7 @@ function Stream({
     return manifestPipeline({ url })
       .zip(sourceOpening, _.identity)
       .flatMap(({ parsed }) => {
-        var manifest = normalizeManifest(parsed.url, parsed.manifest, subtitles);
+        var manifest = normalizeManifest(parsed.url, parsed.manifest, subtitles, images);
 
         setDuration(mediaSource, manifest);
 
