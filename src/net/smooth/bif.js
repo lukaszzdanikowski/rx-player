@@ -9,13 +9,14 @@ function parseBif(buf) {
 
   var fileFormat = bytesToStr(buf.subarray(pos, pos + 8));   pos += 8;
 
-  var minorVersion = buf[pos]; pos += 1;
   var majorVersion = buf[pos]; pos += 1;
+  var minorVersion = buf[pos]; pos += 1;
   var patchVersion = buf[pos]; pos += 1;
+  var increVersion = buf[pos]; pos += 1;
 
-  var version = [minorVersion, majorVersion, patchVersion].join(".");
+  var version = [minorVersion, majorVersion, patchVersion, increVersion].join(".");
 
-  var imageCount = buf[pos] + le4toi(buf, pos + 1); pos += 5;
+  var imageCount = buf[pos] + le4toi(buf, pos + 1); pos += 4;
   var timescale = le4toi(buf, pos); pos += 4;
 
   var format = bytesToStr(buf.subarray(pos, pos + 4)); pos += 4;
