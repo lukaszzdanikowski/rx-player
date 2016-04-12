@@ -20,6 +20,12 @@
     "type": "git",
     "url": "git://github.com/canalplus/rx-player.git"
   },
+  "scripts": {
+      "makedemo": "node \"node_modules/webpack/bin/webpack.js\" --progress --config webpack-demo.config.js -w",
+      "makedev": "node \"node_modules/webpack/bin/webpack.js\" --progress -w ./src dist/rx-player.js",
+      "lint": "eslint ./src || true",
+      "maketest": "node \"node_modules/webpack-dev-server/bin/webpack-dev-server.js\" --port 9999 --progress --quiet --content-base test/ \"mocha!test/index.js\" --output-file test.js"
+  },
   "dependencies": {
     "rxjs": "5.0.0-beta.5"
   },
@@ -34,6 +40,7 @@
     "chai-spies": "^0.5.1",
     "coverjs-loader": "^0.5.0",
     "css-loader": "^0.23.1",
+    "es6-promise": "^3.1.2",
     "file-loader": "^0.8.1",
     "jsx-loader": "^0.13.1",
     "lodash": "3.10.1",

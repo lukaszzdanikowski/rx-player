@@ -56,4 +56,12 @@ module.exports = [
       "url": "http://hss-od-mycanal-l3.canal-plus.com/replay/cplus/ssd/cpl000042164-ant-1173465-170/ANT_1173465_170.bif"
     },
   },
+  {
+    "name": "SuperSpeedWay, 720p, H264 AAC, with encryption",
+    "url": "http://playready.directtaps.net/smoothstreaming/SSWSS720H264PR/SuperSpeedway_720.ism/Manifest",
+    "transport": "smooth",
+    "ciphered": true,
+    "licenseServerUrl": "http://playready.directtaps.net/pr/svc/rightsmanager.asmx?UseSimpleNonPersistentLicense=1&PlayRight=1",
+    "live": false
+  }
 ];

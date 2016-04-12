@@ -3,6 +3,7 @@ var React = require("react");
 
 var RxPlayer = require("../src");
 var DemoPlayer = require("./player");
+var PromisePollyfill = require("es6-promise");
 
 var contentsDatabase = require("./contents");
 
@@ -10,7 +11,69 @@ function getKeySystems(content) {
   if (!content.ciphered)
     return null;
 
-  throw "not implemented";
+  return [{
+      type: "playready",
+      getLicense: function(challenge) {
+          return new Promise(function(resolve, reject) {
+              var licenseServerUrl = content.licenseServerUrl;
+              var licenseRequest = new XMLHttpRequest();
+              var licenseRequestHeaders = {};
+              var licenseChallenge;
+
+              var data = (challenge instanceof ArrayBuffer) ? challenge : challenge.buffer;
+              var dataview = new Uint16Array(data);
+
+              var message = String.fromCharCode.apply(null, dataview);
+              var xmlDoc = new DOMParser().parseFromString(message, "application/xml");
+
+              if (xmlDoc.getElementsByTagName("Challenge")[0]) {
+                  var Challenge = xmlDoc.getElementsByTagName("Challenge")[0].childNodes[0].nodeValue;
+                  if (Challenge) {
+                      licenseChallenge = window.atob(Challenge);
+                  }
+              } else {
+                  licenseChallenge = message;
+              }
+
+              var headerNameList = xmlDoc.getElementsByTagName("name");
+              var headerValueList = xmlDoc.getElementsByTagName("value");
+
+              for (var i = 0; i < headerNameList.length; i += 1) {
+                  licenseRequestHeaders[headerNameList[i].childNodes[0].nodeValue] = headerValueList[i].childNodes[0].nodeValue;
+              }
+              if (licenseRequestHeaders.hasOwnProperty('Content')) {
+                  licenseRequestHeaders['Content-Type'] = licenseRequestHeaders.Content;
+                  delete licenseRequestHeaders.Content;
+              }
+              if (!licenseRequestHeaders.hasOwnProperty('Content-Type')) {
+                  licenseRequestHeaders['Content-Type'] = 'text/xml; charset=utf-8';
+              }
+
+              licenseRequest.open("POST", licenseServerUrl);
+              licenseRequest.responseType = "arraybuffer";
+              licenseRequest.onload = function() {
+                  if (this.status < 200 || this.status > 299) {
+                      return reject("License Server responded with not success status");
+                  }
+                  if (this.status === 200 && this.readyState === 4) {
+                      if (this.response !== null) {
+                          return resolve(this.response);
+                      } else {
+                          return reject("License Server responded with no data");
+                      }
+                  }
+              };
+              licenseRequest.onerror = function() {
+                  return reject("License Server request error");
+              };
+
+              for (var headerName in licenseRequestHeaders) {
+                  licenseRequest.setRequestHeader(headerName, licenseRequestHeaders[headerName]);
+              }
+              licenseRequest.send(licenseChallenge);
+          });
+      }
+  }]
 }
 
 function getParameterByName(name) {
